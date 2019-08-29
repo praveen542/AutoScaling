@@ -15,7 +15,7 @@ resource "aws_security_group" "instance" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["72.208.16.222/32"]
+    cidr_blocks = ["0.0.0.0/0"]  #Change it just for testing
   }
   egress {
     from_port = 0
@@ -45,7 +45,7 @@ resource "aws_launch_configuration" "example" {
 resource "aws_autoscaling_group" "example" {
   launch_configuration = "${aws_launch_configuration.example.id}"
   availability_zones = ["${data.aws_availability_zones.all.names}"]
-  min_size = 1
+  min_size = 2
   max_size = 5
   load_balancers = ["${aws_elb.example.name}"]
   health_check_type = "ELB"
@@ -76,6 +76,7 @@ resource "aws_security_group" "elb" {
 }
 
 ### Creating ELB
+
 resource "aws_elb" "example" {
   name = "terraform-elb"
   security_groups = ["${aws_security_group.elb.id}"]
@@ -96,3 +97,54 @@ resource "aws_elb" "example" {
   }
 }
 
+resource "aws_autoscaling_policy" "agents-scale-up" {
+    name = "agents-scale-up"
+    scaling_adjustment = 1
+    adjustment_type = "ChangeInCapacity"
+    cooldown = 300
+    autoscaling_group_name = "${aws_autoscaling_group.example.name}"
+}
+
+resource "aws_autoscaling_policy" "agents-scale-down" {
+    name = "agents-scale-down"
+    scaling_adjustment = -1
+    adjustment_type = "ChangeInCapacity"
+    cooldown = 300
+    autoscaling_group_name = "${aws_autoscaling_group.example.name}"
+}
+
+resource "aws_cloudwatch_metric_alarm" "memory-high" {
+    alarm_name = "mem-util-high-agents"
+    comparison_operator = "GreaterThanOrEqualToThreshold"
+    evaluation_periods = "2"
+    metric_name = "MemoryUtilization"
+    namespace = "System/Linux"
+    period = "300"
+    statistic = "Average"
+    threshold = "80"
+    alarm_description = "This metric monitors ec2 memory for high utilization on agent hosts"
+    alarm_actions = [
+        "${aws_autoscaling_policy.agents-scale-up.arn}"
+    ]
+    dimensions {
+        AutoScalingGroupName = "${aws_autoscaling_group.example.name}"
+    }
+}
+
+resource "aws_cloudwatch_metric_alarm" "memory-low" {
+    alarm_name = "mem-util-low-agents"
+    comparison_operator = "LessThanOrEqualToThreshold"
+    evaluation_periods = "2"
+    metric_name = "MemoryUtilization"
+    namespace = "System/Linux"
+    period = "300"
+    statistic = "Average"
+    threshold = "40"
+    alarm_description = "This metric monitors ec2 memory for low utilization on agent hosts"
+    alarm_actions = [
+        "${aws_autoscaling_policy.agents-scale-down.arn}"
+    ]
+    dimensions {
+        AutoScalingGroupName = "${aws_autoscaling_group.example.name}"
+    }
+}
