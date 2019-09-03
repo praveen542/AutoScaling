@@ -7,7 +7,7 @@ variable "amis" {
 }
 
 variable "key_name" {
-  default = "data"
+  default = "poc"
 }
 
 variable "subnets" {
