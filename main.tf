@@ -139,19 +139,12 @@ resource "aws_cloudwatch_metric_alarm" "CPU-Utilization" {
   statistic           = "Average"
   threshold           = "50"
 
- 
-
-  dimensions = {
-    AutoScalingGroupName = "${aws_autoscaling_group.example.name}"
-  }
-
- 
-
   alarm_description = "This metric monitors ec2 cpu utilization"
   alarm_actions     = ["${aws_autoscaling_policy.agents-scale-up.arn}"]
-}
 
-}
+ dimensions = {
+    AutoScalingGroupName = "${aws_autoscaling_group.example.name}"
+  }
 
 resource "aws_cloudwatch_metric_alarm" "memory-low" {
     alarm_name = "mem-util-low-agents"
