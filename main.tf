@@ -128,7 +128,8 @@ resource "aws_cloudwatch_metric_alarm" "memory-high" {
     ]
     dimensions {
         AutoScalingGroupName = "${aws_autoscaling_group.example.name}"
- }
+    }
+}
 
 resource "aws_cloudwatch_metric_alarm" "memory-low" {
     alarm_name = "mem-util-low-agents"
